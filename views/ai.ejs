@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<!-- Start of Selection -->
+
+<head>
+    <link rel="icon"  href="https://th.bing.com/th/id/OIP.tZQ8CWUtoT0VA28qAAvyrQHaGh?rs=1&pid=ImgDetMain">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+</head>
+<!-- End of Selection -->
+
+<body class="bg-black text-green-300 overflow-hidden">
+    <div class="min-h-screen w-full flex flex-col relative">
+        <!-- Header -->
+        <div
+            class="text-3xl md:text-4xl font-bold text-center w-full p-4 bg-green-900 sticky top-0 z-10 flex justify-between items-center">
+            <button onclick="toggleSidebar()" class="text-sm p-2 bg-green-700 hover:bg-green-600 rounded-md">☰
+                Saved</button>
+            <span class="text-green-300">It's only your AI</span>
+            <form id="logoutForm" action="/logout" method="post">
+                <button type="submit"
+                    class="w-20 h-8 flex items-center justify-center border border-green-600 rounded-md bg-green-800 text-white text-sm font-medium shadow-md hover:bg-green-700 transition-all duration-300">
+                    Logout
+                </button>
+            </form>
+        </div>
+
+        <!-- Sidebar -->
+
+        <div id="sidebar"
+            class="fixed left-0 top-0 h-full w-64 bg-green-900 shadow-lg transform -translate-x-full transition-transform duration-300 z-20">
+            <div class="p-4 flex justify-between items-center border-b border-green-700">
+                <span class="font-bold text-green-200">Saved Prompts</span>
+                <button onclick="clearLocalStorage()" class="text-red-400 text-sm hover:text-red-300">🗑 Clear</button>
+                <button onclick="toggleSidebar()" class="text-green-400 hover:text-white">✖</button>
+            </div>
+
+            <div id="savedPrompt" class="p-4 overflow-y-auto h-full text-green-200">
+                <!-- Saved prompts will be displayed here -->
+            </div>
+        </div>
+
+        <!-- Response Area -->
+        <div id="response" class="flex-grow p-4 bg-black shadow-md rounded text-left"
+            style="overflow-y:auto; white-space: pre-wrap; scrollbar-width: none; -ms-overflow-style: none; flex-shrink: 0; max-height: 80vh; overflow-x:hidden;">
+        </div>
+
+        <!-- Input Form -->
+        <form onsubmit="handleFormSubmit(event)" class="w-full p-4 bg-green-900 shadow-md rounded mt-auto">
+            <div class="flex items-center w-full">
+                <input type="text" name="prompt" id="prompt"
+                    class="flex-grow p-2 border border-green-700 rounded bg-green-800 text-white font-bold mr-2"
+                    placeholder="Enter your prompt here" required>
+                <button type="submit"
+                    class="p-2 border border-green-700 rounded bg-green-800 text-white font-bold hover:bg-green-700">Generate</button>
+            </div>
+        </form>
+    </div>
+
+    <script>
+        let savedPrompts = JSON.parse(localStorage.getItem("savedPrompts")) || [];
+        let sidebarOpen = false;
+
+        document.addEventListener("DOMContentLoaded", () => {
+            updateSavedPrompts();
+        });
+
+        async function handleFormSubmit(event) {
+            event.preventDefault();
+            const prompt = document.getElementById('prompt').value;
+            const responseDiv = document.getElementById('response');
+
+            if (!prompt.trim()) {
+                responseDiv.textContent = 'Please enter a valid prompt.';
+                return;
+            }
+
+            responseDiv.textContent = 'Loading...';
+
+            try {
+                const response = await fetch('/ai', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ prompt })
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    const formattedResponse = data.response.split('\n').map(line => `<p class="mb-2">${line}</p>`).join('');
+
+                    // Get current time
+                    const timestamp = new Date().toLocaleString();
+
+                    // Save the prompt, response, and timestamp
+                    const newEntry = { prompt, response: formattedResponse, time: timestamp };
+                    savedPrompts.push(newEntry);
+                    localStorage.setItem("savedPrompts", JSON.stringify(savedPrompts));
+
+                    updateSavedPrompts();
+                    showSavedResponse(savedPrompts.length - 1);
+                } else {
+                    const errorData = await response.json();
+                    responseDiv.textContent = 'Error: ' + (errorData.error || 'Unable to generate content.');
+                }
+            } catch (error) {
+                responseDiv.textContent = 'Error: ' + error.message;
+            }
+        }
+
+        function updateSavedPrompts() {
+            const savedPromptDiv = document.getElementById('savedPrompt');
+            savedPromptDiv.innerHTML = savedPrompts.map((entry, index) => `
+                <div class="p-2 border-b border-gray-700 text-white">
+                    <button onclick="showSavedResponse(${index})" class="text-left w-full">
+                        <strong>📝 Question:</strong> ${entry.prompt}
+                    </button>
+                    <div class="text-gray-400 text-sm">${entry.time}</div>
+                </div>
+            `).join('');
+        }
+
+        function showSavedResponse(index) {
+            const responseDiv = document.getElementById('response');
+            const entry = savedPrompts[index];
+
+            responseDiv.innerHTML = `
+                <div class="p-4 border border-gray-700 rounded bg-gray-900 text-white">
+                    <p class="text-lg font-bold">📝 Question:</p>
+                    <p class="mb-4 text-gray-300">${entry.prompt}</p>
+                    <p class="text-lg font-bold">🤖 Response:</p>
+                    <div class="text-gray-200">${entry.response}</div>
+                    <p class="text-xs text-gray-500 mt-4">⏳ Generated on: ${entry.time}</p>
+                </div>
+            `;
+        }
+
+        function toggleSidebar() {
+            sidebarOpen = !sidebarOpen;
+            document.getElementById('sidebar').classList.toggle('-translate-x-full', !sidebarOpen);
+        }
+
+        function clearLocalStorage() {
+            localStorage.removeItem("savedPrompts");
+            savedPrompts = [];
+            updateSavedPrompts();
+        }
+    </script>
+
+</body>
+
+</html>
