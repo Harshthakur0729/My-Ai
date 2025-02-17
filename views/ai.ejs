@@ -91,7 +91,7 @@
 
         function addMessage(sender, text) {
             const chatBox = document.getElementById('chatBox');
-            let formattedText = text.includes("\n") ? `<pre class=' bg-red-200 p-6 rounded break-words whitespace-pre-wrap'>${text}</pre>` : `<p>${text}</p>`;
+            let formattedText = text.includes("\n") ? `<pre class=' bg-sky-500/30 p-6 rounded break-words whitespace-pre-wrap'>${text}</pre>` : `<p>${text}</p>`;
             chatBox.innerHTML += `<div class='mb-2 p-2 ${sender === "user" ? "text-right" : "text-left"} max-w-full break-words whitespace-pre-wrap overflow-hidden'>${formattedText}</div>`;
             chatBox.scrollTop = chatBox.scrollHeight;
 
@@ -121,7 +121,7 @@
         }
 
         function createNewRepo() {
-            const repoName = "repository" + (repositories.length + 1);
+            const repoName = prompt("Enter you repo name")
             repositories.push({ name: repoName, chats: [] });
             localStorage.setItem("repositories", JSON.stringify(repositories));
             updateRepoList();
