@@ -34,7 +34,12 @@
                 </button>
                 <h1 class="text-xl font-bold text-green-400">It's only your AI</h1>
                 <div class="flex space-x-4">
-                    <h1 id="repoName" class="bg-green-600 p-2 text-white rounded "></h1>
+
+                    <div id="repoName" class="cursor-pointer bg-green-600 p-2 text-white rounded "
+                        onclick="toggleRepoDropdown() "> <!-- repoName show--> </div>
+                    <div id="repoDropdown"
+                        class="hidden absolute top-12 bg-black text-white rounded shadow-lg p-2 w-48">
+                    </div>
                     <form action="/logout" method="post">
                         <button type="submit"
                             class="bg-green-600 p-2 rounded text-white hover:bg-green-700 transition duration-200">
@@ -160,6 +165,27 @@
 
         function updateRepoName() {
             document.getElementById("repoName").innerText = repositories[currentRepoIndex]?.name || "Default Repo";
+        }
+
+
+        function toggleRepoDropdown() {
+            const dropdown = document.getElementById("repoDropdown");
+            dropdown.innerHTML = "";
+            if (!dropdown.classList.contains("hidden")) {
+                dropdown.classList.add("hidden");
+                return;
+            }
+            repositories.forEach((repo, index) => {
+                const item = document.createElement("div");
+                item.innerText = repo.name;
+                item.className = "p-2 hover:bg-green-700 cursor-pointer";
+                item.onclick = () => {
+                    switchRepo(index);
+                    dropdown.classList.add("hidden");
+                };
+                dropdown.appendChild(item);
+            });
+            dropdown.classList.remove("hidden");
         }
 
         function toggleSidebar() {
