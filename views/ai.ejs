@@ -1,163 +1,169 @@
 <!DOCTYPE html>
 <html lang="en">
 
-<!-- Start of Selection -->
-
 <head>
-    <link rel="icon"  href="https://th.bing.com/th/id/OIP.tZQ8CWUtoT0VA28qAAvyrQHaGh?rs=1&pid=ImgDetMain">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI</title>
-    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <title>ChatGPT Clone</title>
+    <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<!-- End of Selection -->
 
-<body class="bg-black text-green-300 ">
-    <div class="min-h-screen w-full flex flex-col relative">
-        <!-- Header -->
-        <div
-            class="text-2xl md:text-3xl font-bold text-center w-full p-4 bg-green-900 sticky top-0 z-10 flex justify-between items-center">
-            <button onclick="toggleSidebar()" class="text-sm p-2 bg-green-700 hover:bg-green-600 rounded-md">☰
-                Saved</button>
-            <span class="text-green-300">It's only your AI</span>
-            <form id="logoutForm" action="/logout" method="post">
-                <button type="submit"
-                    class="w-20 h-8 flex items-center justify-center border border-green-600 rounded-md bg-green-800 text-white text-sm font-medium shadow-md hover:bg-green-700 transition-all duration-300">
-                    Logout
-                </button>
-            </form>
-        </div>
-
+<body class="bg-gray-900 text-white">
+    <div class="relative flex h-screen">
         <!-- Sidebar -->
         <div id="sidebar"
-            class="fixed left-0 top-0 h-full w-64 md:w-80 bg-green-900 shadow-lg transform -translate-x-full transition-transform duration-300 z-20">
-            <div class="p-4 flex justify-between items-center border-b border-green-700">
-                <span class="font-bold text-green-200">Saved Prompts</span>
-                <button onclick="clearLocalStorage()" class="text-red-400 text-sm hover:text-red-300">🗑 Clear</button>
-                <button onclick="toggleSidebar()" class="text-green-400 hover:text-white">✖</button>
+            class="w-64 bg-gray-800 p-4 overflow-y-auto fixed left-0 top-0 h-full transform -translate-x-full transition-transform duration-300 z-10">
+            <div class="flex justify-between items-center">
+                <h2 class="text-lg font-bold">Repositories</h2>
+                <button onclick="toggleSidebar()" class="text-xl">✖</button>
             </div>
-
-            <div id="savedPrompt" class="p-4 overflow-y-auto max-h-screen sm:max-h-[calc(100vh-60px)] h-full text-green-200"
-            style="-webkit-overflow-scrolling: touch; scrollbar-width: thin;">
-           <!-- Saved prompts will be displayed here -->
-       </div>
-       
-            
+            <button onclick="createNewRepo()" class="w-full p-2 my-2 bg-green-600 rounded">+ New Repo</button>
+            <div id="repoList" class="mt-2"></div>
         </div>
 
-        <!-- Response Area -->
-        <div id="response"
-            class="flex-grow p-4 bg-black shadow-md rounded text-left overflow-y-auto max-h-[60vh] sm:max-h-[70vh]">
-        </div>
-
-        <!-- Input Form -->
-        <form onsubmit="handleFormSubmit(event)"
-            class="w-full p-4 bg-green-900 shadow-md rounded mt-auto sticky bottom-0">
-            <div class="flex flex-col sm:flex-row items-center w-full gap-2">
-                <input type="text" name="prompt" id="prompt"
-                    class="flex-grow p-3 border border-green-700 rounded bg-green-800 text-white font-bold w-full sm:w-auto"
-                    placeholder="Enter your prompt here" required>
-                <button type="submit"
-                    class="p-3 border border-green-700 rounded bg-green-800 text-white font-bold hover:bg-green-700 w-full sm:w-auto">
-                    Generate
+        <!-- Main Content -->
+        <div id="mainContent" class="flex-1 flex flex-col ml-0 w-full transition-all duration-300">
+            <!-- Top Bar -->
+            <div class="p-4 bg-gray-800 flex justify-between items-center z-20 relative">
+                <button onclick="toggleSidebar()" class="text-lg text-white hover:text-gray-300 focus:outline-none">
+                    ☰
                 </button>
+                <h1 class="text-xl font-bold text-white">It's only your AI</h1>
+                <div class="flex space-x-4">
+                    <button onclick="deleteCurrentRepo()"
+                        class="bg-red-500 p-2 rounded hover:bg-red-600 transition duration-200 ease-in-out ">
+                        Delete Repo
+                    </button>
+                    <form action="/logout" method="post">
+                        <button type="submit"
+                            class="bg-yellow-500 p-2 rounded hover:bg-yellow-600 transition duration-200 ease-in-out">
+                            Logout
+                        </button>
+                    </form>
+                </div>
             </div>
-        </form>
+
+
+            <!-- Chat Section -->
+            <div id="chatBox" class="flex-1 p-4 overflow-y-auto mt-2 overflow-x-hidden"></div>
+
+            <!-- Input Form -->
+            <form onsubmit="handleFormSubmit(event)" class="p-4 bg-gray-800 flex">
+                <input type="text" id="prompt" class="flex-1 p-2 text-black" placeholder="Type your message..."
+                    required>
+                <button type="submit" class="p-2 bg-blue-500 ml-2">Send</button>
+            </form>
+        </div>
     </div>
 
     <script>
-        let savedPrompts = JSON.parse(localStorage.getItem("savedPrompts")) || [];
-        let sidebarOpen = false;
-
+        let repositories = JSON.parse(localStorage.getItem("repositories")) || [{ name: "Default Repo", chats: [] }];
+        let currentRepoIndex = 0;
+        let message;
         document.addEventListener("DOMContentLoaded", () => {
-            updateSavedPrompts();
+            updateRepoList();
+            loadChat();
         });
 
-        async function handleFormSubmit(event) {
+        function handleFormSubmit(event) {
             event.preventDefault();
-            const prompt = document.getElementById('prompt').value;
-            const responseDiv = document.getElementById('response');
+            const promptInput = document.getElementById('prompt');
+            message = promptInput.value.trim();
+            if (!message) return;
 
-            if (!prompt.trim()) {
-                responseDiv.textContent = 'Please enter a valid prompt.';
-                return;
-            }
+            addMessage("user", message);
 
-            responseDiv.textContent = 'Loading...';
-
-            try {
-                const response = await fetch('/ai', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ prompt })
+            fetch('/ai', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ prompt: message })
+            })
+                .then(res => res.json())
+                .then(data => {
+                    addMessage("ai", data.response);
+                })
+                .catch(err => {
+                    addMessage("ai", "Error fetching response");
                 });
 
-                if (response.ok) {
-                    const data = await response.json();
-                    const formattedResponse = data.response.split('\n').map(line => `<p class="mb-2">${line}</p>`).join('');
-
-                    // Get current time
-                    const timestamp = new Date().toLocaleString();
-
-                    // Save the prompt, response, and timestamp
-                    const newEntry = { prompt, response: formattedResponse, time: timestamp };
-                    savedPrompts.push(newEntry);
-                    localStorage.setItem("savedPrompts", JSON.stringify(savedPrompts));
-
-                    updateSavedPrompts();
-                    showSavedResponse(savedPrompts.length - 1);
-                } else {
-                    const errorData = await response.json();
-                    responseDiv.textContent = 'Error: ' + (errorData.error || 'Unable to generate content.');
-                }
-            } catch (error) {
-                responseDiv.textContent = 'Error: ' + error.message;
-            }
+            promptInput.value = "";
         }
 
-        function updateSavedPrompts() {
-            const savedPromptDiv = document.getElementById('savedPrompt');
-            savedPromptDiv.innerHTML = savedPrompts.map((entry, index) => `
-           
-                <div class="p-2 mb-12 border-b border-gray-700 text-white">
-                    <button onclick="showSavedResponse(${index})" class="text-left w-full">
-                        <strong>📝 Question:</strong> ${entry.prompt}
-                    </button>
-                    <div class="text-gray-400 text-sm">${entry.time}</div>
-                     <hr/>
-                </div>
-               
-               
-            `).join('');
+        function addMessage(sender, text) {
+            const chatBox = document.getElementById('chatBox');
+            let formattedText = text.includes("\n") ? `<pre class=' bg-red-200 p-6 rounded break-words whitespace-pre-wrap'>${text}</pre>` : `<p>${text}</p>`;
+            chatBox.innerHTML += `<div class='mb-2 p-2 ${sender === "user" ? "text-right" : "text-left"} max-w-full break-words whitespace-pre-wrap overflow-hidden'>${formattedText}</div>`;
+            chatBox.scrollTop = chatBox.scrollHeight;
+
+            repositories[currentRepoIndex].chats.push({ sender, text });
+            localStorage.setItem("repositories", JSON.stringify(repositories));
         }
 
-        function showSavedResponse(index) {
-            const responseDiv = document.getElementById('response');
-            const entry = savedPrompts[index];
+        function loadChat() {
+            const chatBox = document.getElementById('chatBox');
+            chatBox.innerHTML = "";
+            repositories[currentRepoIndex].chats.forEach(chat => {
+                addMessage(chat.sender, chat.text);
+            });
+        }
 
-            responseDiv.innerHTML = `
-                <div class="p-4 border border-gray-700 rounded bg-gray-900 text-white">
-                    <p class="text-lg font-bold">📝 Question:</p>
-                    <p class="mb-4 text-gray-300">${entry.prompt}</p>
-                    <p class="text-lg font-bold">🤖 Response:</p>
-                    <div class="text-gray-200">${entry.response}</div>
-                    <p class="text-xs text-gray-500 mt-4">⏳ Generated on: ${entry.time}</p>
-                </div>
-            `;
+        function updateRepoList() {
+            const repoList = document.getElementById('repoList');
+            repoList.innerHTML = "";
+            repositories.forEach((repo, index) => {
+                repoList.innerHTML += `
+                    <div class="flex justify-between items-center p-2 my-1 bg-gray-700 rounded">
+                        <button onclick='switchRepo(${index})' class="flex-1 text-left">${repo.name}</button>
+                        <button onclick='deleteRepo(${index})' class="text-red-500 ml-2">Delete</button>
+                    </div>
+                `;
+            });
+        }
+
+        function createNewRepo() {
+            const repoName = "repository" + (repositories.length + 1);
+            repositories.push({ name: repoName, chats: [] });
+            localStorage.setItem("repositories", JSON.stringify(repositories));
+            updateRepoList();
+        }
+
+        function switchRepo(index) {
+            currentRepoIndex = index;
+            loadChat();
+        }
+
+        function deleteRepo(index) {
+            repositories.splice(index, 1);
+            if (currentRepoIndex === index) { currentRepoIndex = 0; }
+            localStorage.setItem("repositories", JSON.stringify(repositories));
+            updateRepoList();
+            loadChat();
+        }
+
+        function deleteCurrentRepo() {
+            repositories.splice(currentRepoIndex, 1);
+            currentRepoIndex = 0;
+            localStorage.setItem("repositories", JSON.stringify(repositories));
+            updateRepoList();
+            loadChat();
         }
 
         function toggleSidebar() {
-            sidebarOpen = !sidebarOpen;
-            document.getElementById('sidebar').classList.toggle('-translate-x-full', !sidebarOpen);
+            const sidebar = document.getElementById("sidebar");
+            const mainContent = document.getElementById("mainContent");
+
+            // Toggle sidebar visibility
+            sidebar.classList.toggle("-translate-x-full");
+
+            // Set the main content margin based on sidebar visibility
+            if (sidebar.classList.contains("-translate-x-full")) {
+                mainContent.style.marginLeft = "0";  // Sidebar closed, reset margin
+            } else {
+                mainContent.style.marginLeft = "256px";  // Sidebar open, shift content
+            }
         }
 
-        function clearLocalStorage() {
-            localStorage.removeItem("savedPrompts");
-            savedPrompts = [];
-            updateSavedPrompts();
-        }
     </script>
 </body>
-
 
 </html>
