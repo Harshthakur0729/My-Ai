@@ -12,55 +12,60 @@
     <div class="relative flex h-screen">
         <!-- Sidebar -->
         <div id="sidebar"
-            class="w-64 bg-gray-800 p-4 overflow-y-auto fixed left-0 top-0 h-full transform -translate-x-full transition-transform duration-300 z-10">
-            <div class="flex justify-between items-center">
+            class="w-64 bg-black p-4 overflow-y-auto fixed left-0 top-0 h-full transform -translate-x-full transition-transform duration-300 z-10 border-r border-green-700">
+            <div class="flex justify-between items-center text-green-400">
                 <h2 class="text-lg font-bold">Repositories</h2>
                 <button onclick="toggleSidebar()" class="text-xl">✖</button>
             </div>
-            <button onclick="createNewRepo()" class="w-full p-2 my-2 bg-green-600 rounded">+ New Repo</button>
-            <div id="repoList" class="mt-2"></div>
+            <button onclick="createNewRepo()"
+                class="w-full p-2 my-2 bg-green-700 text-white rounded hover:bg-green-800 transition duration-200">
+                + New Repo
+            </button>
+            <div id="repoList" class="mt-2 text-white"></div>
         </div>
 
         <!-- Main Content -->
         <div id="mainContent" class="flex-1 flex flex-col ml-0 w-full transition-all duration-300">
             <!-- Top Bar -->
-            <div class="p-4 bg-gray-800 flex justify-between items-center z-20 relative">
-                <button onclick="toggleSidebar()" class="text-lg text-white hover:text-gray-300 focus:outline-none">
+            <div class="p-4 bg-black flex justify-between items-center z-20 relative border-b border-green-700">
+                <button onclick="toggleSidebar()"
+                    class="text-lg text-green-400 hover:text-green-300 focus:outline-none">
                     ☰
                 </button>
-                <h1 class="text-xl font-bold text-white">It's only your AI</h1>
+                <h1 class="text-xl font-bold text-green-400">It's only your AI</h1>
                 <div class="flex space-x-4">
-                    <button onclick="deleteCurrentRepo()"
-                        class="bg-red-500 p-2 rounded hover:bg-red-600 transition duration-200 ease-in-out ">
-                        Delete Repo
-                    </button>
+                    <h1 id="repoName" class="bg-green-600 p-2 text-white rounded "></h1>
                     <form action="/logout" method="post">
                         <button type="submit"
-                            class="bg-yellow-500 p-2 rounded hover:bg-yellow-600 transition duration-200 ease-in-out">
+                            class="bg-green-600 p-2 rounded text-white hover:bg-green-700 transition duration-200">
                             Logout
                         </button>
                     </form>
                 </div>
             </div>
 
-
             <!-- Chat Section -->
-            <div id="chatBox" class="flex-1 p-4 overflow-y-auto mt-2 overflow-x-hidden"></div>
+            <div id="chatBox" class="flex-1 p-4 overflow-y-auto mt-2 overflow-x-hidden bg-gray-900 text-white"></div>
 
             <!-- Input Form -->
-            <form onsubmit="handleFormSubmit(event)" class="p-4 bg-gray-800 flex">
-                <input type="text" id="prompt" class="flex-1 p-2 text-black" placeholder="Type your message..."
-                    required>
-                <button type="submit" class="p-2 bg-blue-500 ml-2">Send</button>
+            <form onsubmit="handleFormSubmit(event)" class="p-4 bg-black flex border-t border-green-700">
+                <input type="text" id="prompt"
+                    class="flex-1 p-2 bg-gray-800 text-white border border-green-600 rounded focus:ring-2 focus:ring-green-500 outline-none transition-all placeholder-gray-400"
+                    placeholder="Type your message..." required>
+                <button type="submit" class="p-2 bg-green-700 text-white ml-2 rounded hover:bg-green-800 transition">
+                    Send
+                </button>
             </form>
         </div>
     </div>
+
 
     <script>
         let repositories = JSON.parse(localStorage.getItem("repositories")) || [{ name: "Default Repo", chats: [] }];
         let currentRepoIndex = 0;
         let message;
         document.addEventListener("DOMContentLoaded", () => {
+            updateRepoName();
             updateRepoList();
             loadChat();
         });
@@ -102,6 +107,10 @@
         function loadChat() {
             const chatBox = document.getElementById('chatBox');
             chatBox.innerHTML = "";
+            if (!repositories.length || !repositories[currentRepoIndex]) {
+                chatBox.innerHTML = "<p class='text-gray-400 text-center'>No repository selected or available.</p>";
+                return;
+            }
             repositories[currentRepoIndex].chats.forEach(chat => {
                 addMessage(chat.sender, chat.text);
             });
@@ -120,15 +129,23 @@
             });
         }
 
+
+
         function createNewRepo() {
-            const repoName = prompt("Enter you repo name")
+            const repoName = prompt("Enter your repo name");
+            if (!repoName) {
+                alert("Repository name cannot be empty!");
+                return;  // Stop function if repoName is empty
+            }
             repositories.push({ name: repoName, chats: [] });
             localStorage.setItem("repositories", JSON.stringify(repositories));
             updateRepoList();
         }
 
+
         function switchRepo(index) {
             currentRepoIndex = index;
+            updateRepoName()
             loadChat();
         }
 
@@ -137,15 +154,12 @@
             if (currentRepoIndex === index) { currentRepoIndex = 0; }
             localStorage.setItem("repositories", JSON.stringify(repositories));
             updateRepoList();
+            updateRepoName()
             loadChat();
         }
 
-        function deleteCurrentRepo() {
-            repositories.splice(currentRepoIndex, 1);
-            currentRepoIndex = 0;
-            localStorage.setItem("repositories", JSON.stringify(repositories));
-            updateRepoList();
-            loadChat();
+        function updateRepoName() {
+            document.getElementById("repoName").innerText = repositories[currentRepoIndex]?.name || "Default Repo";
         }
 
         function toggleSidebar() {
