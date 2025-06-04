@@ -99,15 +99,47 @@
             promptInput.value = "";
         }
 
-        function addMessage(sender, text) {
-            const chatBox = document.getElementById('chatBox');
-            let formattedText = text.includes("\n") ? `<pre class=' bg-sky-500/40 p-6 rounded break-words whitespace-pre-wrap'>${text}</pre>` : `<p>${text}</p>`;
-            chatBox.innerHTML += `<div class='mb-2 p-2 ${sender === "user" ? "text-right" : "text-left"} max-w-full break-words whitespace-pre-wrap overflow-hidden'>${formattedText}</div>`;
-            chatBox.scrollTop = chatBox.scrollHeight;
+        function addMessage(sender, text, isLoading = false) {
+    const chatBox = document.getElementById('chatBox');
+    const container = document.createElement("div");
+    container.className = `mb-2 p-2 ${sender === "user" ? "text-right" : "text-left"} max-w-full break-words whitespace-pre-wrap overflow-hidden`;
 
-            repositories[currentRepoIndex].chats.push({ sender, text });
-            localStorage.setItem("repositories", JSON.stringify(repositories));
+    if (sender === "ai") {
+        let formattedText = text.includes("\n")
+            ? `<pre class='bg-sky-500/40 p-6 rounded break-words whitespace-pre-wrap'></pre>`
+            : `<p></p>`;
+        container.innerHTML = formattedText;
+        chatBox.appendChild(container);
+        chatBox.scrollTop = chatBox.scrollHeight;
+
+        let element = container.querySelector("pre") || container.querySelector("p");
+
+        if (isLoading) {
+            element.innerText = "AI is typing...";
+            return container; // return reference to update later
+        } else {
+            let i = 0;
+            let speed = 1;
+
+            function typeWriter() {
+                if (i < text.length) {
+                    element.innerText += text.charAt(i);
+                    i++;
+                    chatBox.scrollTop = chatBox.scrollHeight;
+                    setTimeout(typeWriter, speed);
+                }
+            }
+            typeWriter();
         }
+    } else {
+        container.innerHTML = `<p>${text}</p>`;
+        chatBox.appendChild(container);
+        chatBox.scrollTop = chatBox.scrollHeight;
+    }
+
+    repositories[currentRepoIndex].chats.push({ sender, text });
+    localStorage.setItem("repositories", JSON.stringify(repositories));
+}
 
         function loadChat() {
             const chatBox = document.getElementById('chatBox');
